@@ -3,9 +3,9 @@
 # Select ubuntu as the base image
 # # http://phusion.github.io/baseimage-docker/
 # Extends smartive/varnish which enables varnish on top of phusion base
-FROM smartive/varnish:latest
+FROM phusion/baseimage:0.9.15
 
-RUN apt-get update -qy && apt-get dist-upgrade -qy && apt-get install -qy git mysql-client apache2 libapache2-mod-php5 python-setuptools vim-tiny php5-mysql php5-gd php5-curl memcached sshfs
+RUN apt-get update -qy && apt-get dist-upgrade -qy && apt-get install -qy git mysql-client apache2 libapache2-mod-php5 python-setuptools vim-tiny php5-mysql php5-gd php5-curl
 
 RUN mkdir -p /srv/www/siteroot
 
@@ -34,10 +34,10 @@ RUN mkdir /etc/service/apache
 ADD apache.sh /etc/service/apache/run
 RUN chmod +x /etc/service/apache/run
 
-COPY start.sh /root/start.sh
-RUN chmod 777 /root/start.sh
+COPY server-base-start.sh /root/server-base-start.sh
+RUN chmod 777 /root/server-base-start.sh
 
 # Define default command.
-CMD ["/root/start.sh"]
+CMD ["/root/server-base-start.sh"]
 
 EXPOSE 80 3306 443 11211
