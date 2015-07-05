@@ -35,10 +35,10 @@ RUN echo "The code for your application lives here. This will link directly to y
 RUN mv /var/www/html/index.html /srv/www/siteroot/index.html
 
 # www
-ADD www.conf /etc/apache2/sites-available/www.conf
+ADD config/apache2/www.conf /etc/apache2/sites-available/www.conf
 # sites-common
 RUN mkdir -p /etc/apache2/sites-common
-ADD wwww /etc/apache2/sites-common/wwww
+ADD config/apache2/wwww /etc/apache2/sites-common/wwww
 
 RUN a2ensite www
 RUN a2dissite 000-default
@@ -48,7 +48,7 @@ RUN a2enmod proxy_http
 
 # Make apache start and be monitored by runit
 RUN mkdir /etc/service/apache
-ADD apache.sh /etc/service/apache/run
+ADD config/apache2/apache.sh /etc/service/apache/run
 RUN chmod +x /etc/service/apache/run
 
 EXPOSE 80 3306 443 11211
