@@ -8,10 +8,10 @@
 # RUN /etc/my_init.d/00_regen_ssh_host_keys.sh
 
 # FOR LOCAL ENVIRONMENT ONLY
-if [ -n "$ENABLE_SSH"];
+if [ ! -z "$ENABLE_SSH"];
 	then
-	if [ -n "$SSH_USERNAME" ]; then sshuname=$SSH_USERNAME else sshuname=root
-	if [ -n "$SSH_PASSWORD" ]; then sshpass=$SSH_PASSWORD else sshpass=password
+	if [ ! -z "$SSH_USERNAME" ]; then sshuname=$SSH_USERNAME else sshuname=root; fi
+	if [ ! -z "$SSH_PASSWORD" ]; then sshpass=$SSH_PASSWORD else sshpass=password; fi
 	rm -f /etc/service/sshd/down
 	echo "${sshuname}:${sshpass}" | chpasswd
 	sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
