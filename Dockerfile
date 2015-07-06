@@ -29,10 +29,10 @@ RUN gem install compass -v 0.12.6
 # ADD . /srv/www/siteroot
 
 RUN mkdir /data && chown -R www-data:www-data /data
-RUN mkdir -p /srv/www
+RUN mkdir -p /srv/www && chown -R www-data:www-data /srv/www
 RUN ln -s /data /srv/www/siteroot
 RUN echo "The code for your application lives here. This will link directly to your site root folder." > /data/README.txt
-RUN mv /var/www/html/index.html /srv/www/siteroot/index.html
+RUN mv /var/www/html/index.html /data/
 
 # www
 ADD config/apache2/www.conf /etc/apache2/sites-available/www.conf
