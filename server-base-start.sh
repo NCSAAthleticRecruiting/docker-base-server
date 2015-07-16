@@ -10,8 +10,8 @@
 # FOR LOCAL ENVIRONMENT ONLY
 if [ "${ENABLE_SSH}" != "" ];
 then
-if [ ! -z "$SSH_USERNAME" ]; then sshuname=$SSH_USERNAME else sshuname=root; fi
-if [ ! -z "$SSH_PASSWORD" ]; then sshpass=$SSH_PASSWORD else sshpass=password; fi
+if [ "${SSH_USERNAME}" != "" ]; then sshuname=$SSH_USERNAME else sshuname=root; fi
+if [ "${SSH_PASSWORD}" != "" ]; then sshpass=$SSH_PASSWORD else sshpass=password; fi
 rm -f /etc/service/sshd/down
 echo "${sshuname}:${sshpass}" | chpasswd
 sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
