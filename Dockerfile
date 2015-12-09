@@ -1,54 +1,50 @@
-# Dockerfile for Apache web server.
+FROM sillelien/jessy:master
 
-# Select ubuntu as the base image
-# # http://phusion.github.io/baseimage-docker/
-FROM phusion/baseimage:0.9.15
+ENV SSH_USERNAME root
+ENV SSH_PASSWORD password
 
-ENV HOME /root
+ENV GUI_USERNAME developer
+ENV GUI_PASSWORD password
+ENV SYNCDIR /data
+ENV PRIVATE_KEY_CONTENTS none
 
-# Make sure root user is added to apache group
-RUN usermod -a -G www-data root
+# install syncthing and openssh
+RUN apt-get update && apt-get remove apt-listchanges && apt-get install -y curl
+RUN apt-get install -y openssh-server && cd /tmp && \
+    curl -L "https://github.com/syncthing/syncthing/releases/download/v0.11.6/syncthing-linux-amd64-v0.11.6.tar.gz" -O && \
+    tar -zvxf "syncthing-linux-amd64-v0.11.6.tar.gz" && \
+    mv syncthing-linux-amd64-v0.11.6/syncthing /usr/local/bin/syncthing && \
+    mkdir -p /sync/ && \
+    apt-get clean -y && \
+    apt-get autoclean -y && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/ && \
+    rm -rf /tmp/*
 
-# Use baseimage-docker's init system.
-COPY server-base-start.sh /root/server-base-start.sh
-RUN chmod 777 /root/server-base-start.sh
-CMD sh /root/server-base-start.sh && /sbin/my_init
+RUN if [ ! -d "/var/run/sshd" ]; then mkdir /var/run/sshd; fi;
+RUN chmod 0755 /var/run/sshd
+RUN echo "${SSH_USERNAME}:${SSH_PASSWORD}" | chpasswd
+RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i -e 's/^#*\(PermitEmptyPasswords\) .*/\1 yes/' /etc/ssh/sshd_config
+RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
 
-RUN apt-get update -qy && apt-get dist-upgrade -qy && apt-get install -qy git mysql-client apache2 libapache2-mod-php5 python-setuptools vim-tiny php5-mysql php5-gd php5-curl sshfs
+RUN if [ "${PRIVATE_KEY_CONTENTS}" != "none" ]; \
+    then echo "${PRIVATE_KEY_CONTENTS}" > ~/.ssh/${PRIVATE_KEY_FILE} \
+    sed -i 's/\\n/\/g' ~/.ssh/${PRIVATE_KEY_FILE} \
+    chmod 600  ~/.ssh/${PRIVATE_KEY_FILE}; \
+    fi
+  
+# public key goes here
+RUN if [ ! -d "/root/.ssh" ]; then mkdir /root/.ssh; fi
+RUN chmod 0700 /root/.ssh
 
-# Install SASS and Compass
-RUN apt-get install ruby1.9.1 -y
-RUN apt-get install ruby1.9.1-dev -y
-RUN gem update rdoc
-RUN apt-get install build-essential -y
-RUN gem install sass -v 3.2.19
-RUN gem install compass -v 0.12.6
+RUN if [ ! -d "/root/Sync" ]; then mkdir root/Sync && chmod 777 /root/Sync; fi
+RUN if [ ! -d "/root/.config/syncthing" ]; then mkdir -p /root/.config/syncthing; fi
+ADD ./config.xml /root/.config/syncthing/config.xml
 
-# RUN useradd -rm ruby_dev -u 1000 -g 50
-# don't add source code, going to mount it
-# ADD . /srv/www/siteroot
+VOLUME ["/root/Sync","/root/.ssh"]
+EXPOSE 8384 22000 22 21025/udp 21026/udp 22026/udp
 
-RUN mkdir /data && chown -R www-data:www-data /data
-RUN mkdir -p /srv/www && chown -R www-data:www-data /srv/www
-RUN ln -s /data /srv/www/siteroot
-RUN echo "The code for your application lives here. This will link directly to your site root folder." > /data/README.txt
-RUN mv /var/www/html/index.html /data/
-
-# www
-ADD config/apache2/www.conf /etc/apache2/sites-available/www.conf
-# sites-common
-RUN mkdir -p /etc/apache2/sites-common
-ADD config/apache2/wwww /etc/apache2/sites-common/wwww
-
-RUN a2ensite www
-RUN a2dissite 000-default
-RUN a2enmod usertrack
-RUN a2enmod rewrite
-RUN a2enmod proxy_http
-
-# Make apache start and be monitored by runit
-RUN mkdir /etc/service/apache
-ADD config/apache2/apache.sh /etc/service/apache/run
-RUN chmod +x /etc/service/apache/run
-
-EXPOSE 80 3306 443 11211
+ENTRYPOINT /usr/sbin/sshd -D && service sshd start & if [ ! -d "$SYNCDIR" ]; then mkdir "$SYNCDIR"; fi && \
+sed -i 's|'/root/Sync'|'$SYNCDIR'|g' /root/.config/syncthing/config.xml && \
+syncthing -gui-address=0.0.0.0:8384 -gui-authentication=${GUI_USERNAME}:${GUI_PASSWORD}
